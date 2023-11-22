@@ -10,20 +10,23 @@ proc import out=dat datafile='E:\users\conner\PEx rate\example.csv' dbms=csv rep
 data dat; 
 set dat;
 log_t=log(t);
+
+t2=rand('UNIFORM',0.8,1.2);
+log_t2=log(t2);
 run;
 
 
 * Poisson;
 proc genmod data=dat;
 class trt(ref='0');
-model y=trt x / dist=poisson link=log offset=log_t;
+model y=trt x / dist=poisson link=log offset=log_t2;
 lsmeans trt / cl diff exp;
 run;
 
 * NegBin;
 proc genmod data=dat;
 class trt(ref='0');
-model y=trt x / dist=nb link=log offset=log_t;
+model y=trt x / dist=nb link=log offset=log_t2;
 lsmeans trt / cl diff exp;
 run;
 
@@ -31,7 +34,7 @@ run;
 * Poisson w/ G-estimation;
 proc genmod data=dat;
 class trt(ref='0');
-model y=trt x / dist=poisson link=log offset=log_t;
+model y=trt x / dist=poisson link=log offset=log_t2;
 lsmeans trt / cl diff exp;
 store out=mod;
 run;
@@ -47,19 +50,18 @@ score data=trt0 out=preds0 pred=pred0 / ilink;
 run;
 
 proc means data=preds1 mean;
-var pred1;
-output out=rate1;
+var pred1 t2;
+output out=rate1 mean=pred1 t2;
 run;
 proc means data=preds0 mean;
-var pred0;
-output out=rate0;
+var pred0 t2;
+output out=rate0 mean=pred0 t2;
 run;
 
 proc sql;
-select pred1 as rate1, pred0 as rate0, pred1/pred0 as rr
+select r1.pred1/r1.t2 as rate1, r0.pred0/r0.t2 as rate0, r1.pred1/r0.pred0 as rr
 from rate1 r1
-join rate0 r0 on 1
-where r1._STAT_='MEAN' and r0._STAT_='MEAN';
+join rate0 r0 on 1;
 quit;
 
 * Bootstrap 95% CI;
